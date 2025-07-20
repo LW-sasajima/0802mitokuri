@@ -165,27 +165,42 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'claude-3-haiku-20240307',
+          model: 'claude-3-5-sonnet-20241022',  // より高性能なモデルに変更
           max_tokens: 2000,
           messages: [
             {
               role: 'user',
-              content: `You are a p5.js creative coding expert. Modify the following p5.js code based on the user's instruction.
+              content: `You are an expert p5.js creative coder. Your task is to modify the given code based on the user's instruction.
 
-Current code:
+CURRENT CODE:
+\`\`\`javascript
 ${code}
+\`\`\`
 
-User instruction: "${aiPrompt}"
+USER INSTRUCTION: "${aiPrompt}"
 
-Guidelines:
-- "色を増やす" → Add colorful random colors using fill(random(255), random(255), random(255))
-- "もっとぐちゃぐちゃ" → Add more randomness, noise(), and chaotic movements
-- "動きを速く" → Increase all speed-related parameters
-- "大きく" → Make shapes bigger
-- "小さく" → Make shapes smaller
-- Be creative and make interesting modifications!
+INSTRUCTION INTERPRETATIONS:
+- "色を増やす" / "add colors" → Add vibrant colors using: fill(random(255), random(255), random(255, alpha)) or colorMode(HSB) with varying hue
+- "もっとぐちゃぐちゃ" / "more chaotic" → Increase randomness: larger random ranges, add noise(), sin/cos with varying amplitudes, irregular movements
+- "動きを速く" / "faster" → Multiply ALL speed variables by 2-5x (angle+=, x+=, frameCount multipliers, etc.)
+- "動きを遅く" / "slower" → Divide ALL speed variables by 2-5x
+- "大きく" / "bigger" → Multiply ALL size parameters by 1.5-3x
+- "小さく" / "smaller" → Divide ALL size parameters by 2-3x
+- "回転" / "rotate" → Add rotation with rotate(frameCount * 0.01) or rotating elements
+- "波" / "wave" → Add sine/cosine wave patterns
+- "パーティクル" / "particles" → Add particle systems or multiple moving elements
+- "グラデーション" / "gradient" → Use lerpColor() or gradual color transitions
+- "3D" → Add WEBGL mode and 3D shapes (box, sphere, etc.)
 
-Return ONLY the complete modified p5.js code without any explanations or markdown.`
+IMPORTANT RULES:
+1. Output ONLY the complete modified p5.js code
+2. Ensure the code is syntactically correct and will run
+3. Make significant, visible changes based on the instruction
+4. Preserve the core structure while enhancing based on the request
+5. NO explanations, NO markdown, NO comments about changes
+6. If instruction is unclear, make creative interpretation
+
+OUTPUT THE MODIFIED CODE NOW:`
             }
           ]
         })
@@ -208,9 +223,20 @@ Return ONLY the complete modified p5.js code without any explanations or markdow
         if (responseData.content && responseData.content[0] && responseData.content[0].text) {
           let newCode = responseData.content[0].text;
           
-          // クリーンアップ
-          newCode = newCode.replace(/^```(?:javascript|js)?\s*\n/g, '');
-          newCode = newCode.replace(/\n```\s*$/g, '');
+          // クリーンアップ - より徹底的に
+          newCode = newCode.replace(/^```(?:javascript|js|jsx)?\s*\n/gm, '');
+          newCode = newCode.replace(/\n```\s*$/gm, '');
+          newCode = newCode.replace(/^```\s*/gm, '');
+          newCode = newCode.replace(/\s*```$/gm, '');
+          
+          // 説明文が含まれている場合は除去
+          if (newCode.includes('function setup()')) {
+            const setupIndex = newCode.indexOf('function setup()');
+            if (setupIndex > 0 && newCode.substring(0, setupIndex).length > 50) {
+              newCode = newCode.substring(setupIndex);
+            }
+          }
+          
           newCode = newCode.trim();
           
           console.log('✅ AIによるコード生成成功');
