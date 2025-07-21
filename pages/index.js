@@ -1,85 +1,536 @@
 // pages/index.js
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, RefreshCw, Wand2 } from 'lucide-react';
+import { Play, Pause, RefreshCw, Wand2, Download } from 'lucide-react';
 import { useRouter } from 'next/router';
 
 const starterTemplates = [
   {
     id: 1,
-    name: "流れる粒子",
-    code: `function setup() {
-  createCanvas(400, 400);
-  background(0);
+    name: "01_なみなみ",
+    code: `let popColors;
+let numRows = 10;
+let rowHeights = [];
+let bgColor;
+let seed;
+let url = "https://coolors.co/564787-dbcbd8-f2fdff-9ad4d6-101935";
+
+function createPallete(url) {
+  let slashId = url.lastIndexOf('/');
+  let colStr = url.slice(slashId + 1);
+  let arr = colStr.split('-').map(c => color("#" + c));  // ← ここで color() を使う
+  return arr;
+}
+
+function setup() {
+  createCanvas(800, 600);
+  noLoop();
+  colorMode(RGB);
+  seed = int(random(999999));
+  randomSeed(seed);
+  popColors = createPallete(url);
+　bgColor = random(popColors);
+  // ランダムな行の高さを生成（全体がちょうどcanvas高さになるように）
+  generateRandomRowHeights();
+}
+
+function generateRandomRowHeights() {
+  let rawHeights = [];
+  let total = 0;
+  for (let i = 0; i < numRows; i++) {
+    let h = random(30, 80); // 各行の高さをランダムに（30〜80px）
+    rawHeights.push(h);
+    total += h;
+  }
+  // 正規化して高さを合計heightに合わせる
+  for (let i = 0; i < numRows; i++) {
+    rowHeights[i] = rawHeights[i] * (height / total);
+  }
 }
 
 function draw() {
-  fill(255, 10);
+  background(bgColor);
+  let y = 0;
+  for (let i = 0; i < numRows; i++) {
+    let h = rowHeights[i];
+
+    // 波のような色の流れ（行番号によるsin波）
+    let wave = sin(i * 0.8);
+    let shiftRaw = map(wave, -1, 1, 0, popColors.length * 2);
+    let shift = floor(shiftRaw) % popColors.length;
+    let colors = rotateColors(popColors, shift);
+    drawHorizontalGradientRect(0, y, width, h, colors);
+    y += h;
+  }
+}
+
+// グラデーションを描く
+function drawHorizontalGradientRect(x, y, w, h, colors) {
   noStroke();
-  let x = random(width);
-  let y = random(height);
-  let size = random(2, 20);
-  ellipse(x, y, size, size);
-}`
+  for (let i = 0; i < w; i++) {
+    let t = i / (w - 1);
+    let c = getGradientColor(t, colors);
+    fill(c);
+    rect(x + i, y, 1, h);
+  }
+}
+
+// グラデーション色の補間
+function getGradientColor(t, colors) {
+  let index = floor(t * (colors.length - 1));
+  let localT = map(t, index / (colors.length - 1), (index + 1) / (colors.length - 1), 0, 1);
+  return lerpColor(colors[index], colors[(index + 1) % colors.length], localT);
+}
+
+// 配列をローテート
+function rotateColors(arr, n) {
+  return arr.slice(n).concat(arr.slice(0, n));
+}
+
+function keyPressed() {
+  if (key == 's' || key == 'S') saveCanvas(seed + "",'png');
+}
+
+`
   },
   {
     id: 2,
-    name: "回転する幾何学",
-    code: `let angle = 0;
+    name: "02_つみきのように",
+    code: `let url = "https://coolors.co/333333-7f5af0-4ade80-22d3ee-fda4af"; 
+let palette;
+let bgColor;
+let seed;
+
+function createPallete(url) {
+  let slashId = url.lastIndexOf('/');
+  let colStr = url.slice(slashId + 1);
+  let arr = colStr.split('-').map(c => "#" + c);
+  return arr;
+}
 
 function setup() {
-  createCanvas(400, 400);
+  createCanvas(600, 800);
+  seed = int(random(999999));
+  randomSeed(seed);
+  palette = createPallete(url);
+  bgColor = random(palette);
+  noLoop();
+  noStroke();
   rectMode(CENTER);
+  angleMode(DEGREES);
 }
 
 function draw() {
-  background(0, 20);
-  translate(width/2, height/2);
-  rotate(angle);
-  stroke(255);
-  noFill();
-  rect(0, 0, 100, 100);
-  angle += 0.02;
-}`
+  background(bgColor);
+	
+  let xnum = 10;
+  let ynum = 100;
+  let colWidth = width / xnum;
+
+  // 波の振幅と周期（左右の揺れ）
+  let waveAmplitude = 50; 
+  let waveFrequency = TWO_PI / xnum * 4;  // x方向に4周期の波
+
+  for (let x = 0; x < xnum; x++) {
+    let shuffled = shuffle(palette);
+    let colA = color(shuffled[0]);
+    let colB = color(shuffled[1]);
+    let colC = color(shuffled[2]);
+
+    let shapeW = random(30, 120);
+    let shapeH = height;
+
+    let cx = x * colWidth + colWidth / 2;
+    let cy = height / 2;
+
+    let angle;
+    if (random() < 0.3) {
+      angle = 0;
+    } else {
+      angle = random(-60, 60);
+    }
+
+    push();
+    translate(cx, cy);
+    for (let i = 0; i < ynum; i++) {
+      let waveOffsetX = sin(i * waveFrequency) * random(100);
+      let t = i / (ynum - 1);
+      let baseY = map(i, 0, ynum - 1, -shapeH / 2, shapeH / 2);
+
+      let y = baseY;
+      let xPos = waveOffsetX; // iではなくxを使った波のずれ
+
+      let c;
+      if (t < 0.5) {
+        c = lerpColor(colA, colB, map(t, 0, 0.5, 0, 1));
+      } else {
+        c = lerpColor(colB, colC, map(t, 0.5, 1, 0, 1));
+      }
+
+      c.setAlpha(220);
+      fill(c);
+      rect(xPos, y, shapeW, shapeH / ynum + 1);
+    }
+
+    pop();
+  }
+}
+
+function keyPressed() {
+  if (key == 's' || key == 'S') saveCanvas(seed + "",'png');
+}
+`
   },
   {
     id: 3,
-    name: "ノイズの波",
-    code: `let t = 0;
+    name: " 3_カーテン",
+    code: `let url = "https://coolors.co/ef476f-ffd166-06d6a0-118ab2-073b4c";  // 149
+let palette;
+let paletteColors;
+
+function createPallete(url) {
+  let slashId = url.lastIndexOf('/');
+  let colStr = url.slice(slashId + 1);
+  let arr = colStr.split('-').map(c => "#" + c);
+  return arr;
+}
 
 function setup() {
-  createCanvas(400, 400);
+		pixelDensity(3);
+  createCanvas(600, 800);
+  palette = createPallete(url);
+  paletteColors = palette.map(c => color(c));
+  paletteColors = shuffle(paletteColors, true);
+  noLoop();
+  background(0);
+  strokeWeight(1);
+  noFill();
 }
 
 function draw() {
-  background(0, 10);
-  stroke(255);
-  noFill();
-  beginShape();
-  for (let x = 0; x < width; x += 5) {
-    let y = height/2 + noise(x * 0.01, t) * 200 - 100;
-    vertex(x, y);
+  background(0);
+
+  let waveCount = 300;
+  let amplitude = 30;
+
+  for (let i = 0; i < waveCount; i++) {
+    let yOffset = map(i, 0, waveCount - 1, height * 0.05, height * 0.95);
+    let waveFreq = map(i, 0, waveCount - 1, 0.02, 0.12);
+
+    let segmentLength = 3;
+
+    for (let x = 0; x < width; x += segmentLength) {
+      let x0 = x;
+      let x1 = min(x + segmentLength, width);
+
+      let y0 = yOffset + sin(x0 * waveFreq + i * TWO_PI / waveCount) * amplitude;
+      let y1 = yOffset + sin(x1 * waveFreq + i * TWO_PI / waveCount) * amplitude;
+
+      // 色の補間パラメータを斜め方向に計算
+      let t = ((x0 + y0) + (x1 + y1)) / 2 / (width + height);
+      let col = getGradientColor(t);
+
+      stroke(col);
+      line(x0, y0, x1, y1);
+    }
   }
-  endShape();
-  t += 0.01;
-}`
+}
+
+function getGradientColor(t) {
+  let n = paletteColors.length - 1;
+  let scaledT = t * n;
+  let idx = floor(scaledT);
+  idx = constrain(idx, 0, n - 1);
+  let localT = scaledT - idx;
+  return lerpColor(paletteColors[idx], paletteColors[idx + 1], localT);
+}
+
+function keyPressed() {
+  if (key == 's' || key == 'S') saveCanvas();
+}
+`
   },
   {
     id: 4,
-    name: "カラフルな円",
-    code: `function setup() {
-  createCanvas(400, 400);
-  noStroke();
+    name: "4_ぐにゃぐにゃの線",
+    code: `let url = "https://coolors.co/caffd0-c9e4e7-b4a0e5-ca3cff-1e1014";
+let palette;
+let bgColor;
+let seed;
+
+function createPallete(url) {
+	let slashId = url.lastIndexOf('/');
+	let colStr = url.slice(slashId + 1);
+	let arr = colStr.split('-').map(c => "#" + c);
+	return arr;
+}
+
+function keyPressed() {
+  if (key == 's' || key == 'S') {
+    saveCanvas();
+  }
+}
+
+function setup() {
+  createCanvas(600, 800);
+  seed = int(random(999999));
+  randomSeed(seed);
+  palette = createPallete(url);
+　bgColor = random(palette);
+  shapePalette = palette.filter(c => c !== bgColor); 
+  noLoop();
 }
 
 function draw() {
-  let x = random(width);
-  let y = random(height);
-  let r = random(255);
-  let g = random(255);
-  let b = random(255);
-  fill(r, g, b, 50);
-  ellipse(x, y, random(10, 100));
-}`
+  background(bgColor);
+  let xnum = 10;
+  let ynum = 13;
+  let w = width / xnum;
+  let h = height / ynum;
+  for (let y = 0; y < ynum; y++) {
+    for (let x = 0; x < xnum; x++) {
+      let cx = x * w + w / 2;
+      let cy = y * h + h / 2;
+      let c = color(random(shapePalette));
+      stroke(c);
+      noFill();
+      let pts = drawRandomLine(cx, cy, w, h);
+
+      // 線の始点と終点に円を描く
+      let circleSize = 8;
+      fill(c);
+      noStroke();
+
+      rectMode(CENTER);
+      ellipse(pts[pts.length - 2].x, pts[pts.length -2].y, circleSize*0.8, circleSize*0.8); 
+      rect(pts[1].x, pts[1].y, 1, circleSize*30);
+    }
+  }
+}
+
+function drawRandomLine(x, y, w, h) {
+  let steps = int(random(10, 25));
+  let len = min(w, h) * 0.5;
+  let px = x;
+  let py = y;
+  let points = [];
+
+  beginShape();
+  for (let i = 0; i < steps; i++) {
+    let angle = noise(px * 0.01, py * 0.01, i * 0.1) * TWO_PI * 2;
+    let dx = cos(angle) * len;
+    let dy = sin(angle) * len;
+    let nx = px + dx;
+    let ny = py + dy;
+    let sw = (noise(px, py, i), 0, 1, 1, random(4));
+    strokeWeight(sw);
+  
+    curveVertex(nx, ny);
+    points.push({ x: nx, y: ny });
+    px = nx;
+    py = ny;
+  }
+  endShape();
+
+  return points;
+}
+
+function keyPressed() {
+  if (key == 's' || key == 'S') saveCanvas(seed + "",'png');
+}
+
+`
+  },
+  {
+    id: 5,
+    name: " 5_いばら",
+    code: `let url = "https://coolors.co/fbaf00-ffd639-ffa3af-007cbe-00af54";
+let palette;
+let seed;
+
+function createPallete(url) {
+  let slashId = url.lastIndexOf('/');
+  let colStr = url.slice(slashId + 1);
+  let arr = colStr.split('-').map(c => "#" + c);
+  return arr;
+}
+
+function setup() {
+  createCanvas(600, 800);
+  seed = int(random(999999));
+  randomSeed(seed);
+  palette = createPallete(url);
+  angleMode(DEGREES);
+  noLoop();
+}
+
+function draw() {
+  background(0);
+  let xnum = 6;
+  let ynum = 8;
+  let w = width / xnum;
+  let h = height / ynum;
+
+  let v1 = random(0.5, 1);
+  let v2 = random(0.1, 0.3);
+  
+  for (let y = 0; y < ynum; y++) {
+    for (let x = 0; x < xnum; x++) {
+      let cx = x * w + w / 2;
+      let cy = y * h + h / 2;
+
+      push();
+      translate(cx, cy);
+
+      let blades = 4;             // 羽根は4枚
+      let turns = 5;              // ぐるぐる巻きの回転数
+      let bladeLength = w * v1;
+      let bladeWidth = w * v2;
+
+      for (let i = 0; i < blades; i++) {
+        // ブレードごとにスパイラルの角度をずらす
+        let baseAngle = i * (360 / blades);
+        
+        // さらに内側から外側へ少しずつ回転させて重ねるループ
+        for (let t = 0; t < turns; t++) {
+          push();
+          // スパイラル角度は基本角 + 360度×回転数
+          let spiralAngle = baseAngle + t * (360 / turns);
+          rotate(spiralAngle);
+          // ブレードの長さ方向に少しずつずらす
+          let offset = (bladeLength / turns) * t;
+					
+          translate(0, -offset);
+          fill(random(palette));
+          noStroke();
+          beginShape();
+          vertex(0, 0);
+          vertex(bladeWidth / 2, - (bladeLength / turns));
+          vertex(-bladeWidth / 2, - (bladeLength / turns));
+          endShape(CLOSE);
+
+          pop();
+        }
+      }
+      pop();
+    }
+  }
+}
+
+function keyPressed() {
+  if (key == 's' || key == 'S') saveCanvas(seed + "",'png');
+}
+`
+  },
+  {
+    id: 6,
+    name: " 6_もじであそぶ",
+    code: `let url = "https://coolors.co/e08dac-6a7fdb-57e2e5-45cb85-153131";
+let palette;
+let circles = [];
+let bgColor;
+let seed;
+
+let pokemonNames = [
+  "ピカチュウ", "イーブイ", "ゼニガメ", "フシギダネ", "ヒトカゲ",
+  "プリン", "カビゴン", "ミュウ", "ミュウツー", "リザードン",
+  "ニャース", "ルカリオ", "ゲンガー", "ポッチャマ", "キモリ",
+  "ヒコザル", "ポカブ", "モクロー", "ケロマツ", "ヤドン"
+];
+
+function createPallete(url) {
+  let slashId = url.lastIndexOf('/');
+  let colStr = url.slice(slashId + 1);
+  return colStr.split('-').map(c => "#" + c);
+}
+
+function setup() {
+	// pixelDensity(3);
+	// pixelDensity(4);
+  createCanvas(600, 800);
+  seed = int(random(999999));
+  randomSeed(seed);
+  palette = createPallete(url);
+  bgColor = random(palette);
+  shapePalette = palette.filter(c => c !== bgColor);
+  angleMode(DEGREES);
+  noLoop();
+  noStroke();
+  packCircles();
+  assignCharacters();
+}
+
+function packCircles() {
+  let attempts = 0;
+  let maxTries = 20000;
+  let maxCircles = 600;
+
+  while (circles.length < maxCircles && attempts < maxTries) {
+    let r = random(10, 60);
+    let x = random(r, width - r);
+    let y = random(r, height - r);
+
+    let valid = true;
+    for (let c of circles) {
+      let d = dist(x, y, c.x, c.y);
+      if (d < r + c.r + 0.5) {
+        valid = false;
+        break;
+      }
+    }
+
+    if (valid) {
+      circles.push({ x, y, r, char: "", angle: 0 });
+    }
+
+    attempts++;
+  }
+}
+
+function assignCharacters() {
+  let charPool = [];
+
+  // 文字のプールを作る（ランダムな順番で全ポケモン名の文字）
+  while (charPool.length < circles.length) {
+    let name = random(pokemonNames);
+    let chars = name.split("");
+    for (let ch of chars) {
+      charPool.push(ch);
+      if (charPool.length >= circles.length) break;
+    }
+  }
+
+  // 各円に1文字ずつと角度を割り当て
+  for (let i = 0; i < circles.length; i++) {
+    circles[i].char = charPool[i];
+    circles[i].angle = random(-45, 45);  // -45〜+45度で回転
+  }
+}
+
+function draw() {
+  background(bgColor);
+  for (let c of circles) {
+    drawLabeledCircle(c);
+  }
+}
+
+function drawLabeledCircle(c) {
+  push();
+  translate(c.x, c.y);
+  rotate(c.angle);
+  fill(random(shapePalette));
+  textAlign(CENTER, CENTER);
+  textFont('sans-serif');
+  textLeading(c.r * 1.1); // 複数行になるときの行間も自然に
+  textStyle(BOLD);
+  textSize(c.r * 2.5);
+  text(c.char, 0, 0);  // 回転中心に描画
+  pop();
+}
+
+function keyPressed() {
+  if (key == 's' || key == 'S') saveCanvas(seed + "",'png');
+}
+`
   }
 ];
 
@@ -121,6 +572,20 @@ export default function Home() {
 <body>
   <main></main>
   <script>
+    // 画像保存機能を追加
+    window.saveCanvas = function() {
+      if (typeof saveCanvas !== 'undefined') {
+        saveCanvas('generative-art', 'png');
+      }
+    };
+    
+    // 親ウィンドウからのメッセージを受信
+    window.addEventListener('message', function(event) {
+      if (event.data === 'SAVE_CANVAS') {
+        window.saveCanvas();
+      }
+    });
+    
     try {
       ${code}
     } catch (e) {
@@ -147,6 +612,25 @@ export default function Home() {
     setIframeKey(prev => prev + 1);
   };
 
+  const saveImage = () => {
+    if (!isPlaying) {
+      alert('画像を保存するには、まずプレビューを実行してください。');
+      return;
+    }
+    
+    // iframeにメッセージを送信して画像を保存
+    const iframe = document.querySelector('iframe');
+    if (iframe && iframe.contentWindow) {
+      // タイムスタンプを生成
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      
+      // p5.jsのsaveCanvas関数を呼び出すメッセージを送信
+      iframe.contentWindow.postMessage('SAVE_CANVAS', '*');
+    } else {
+      alert('プレビューが見つかりません。');
+    }
+  };
+
   const handleTemplateSelect = (index) => {
     setSelectedTemplate(index);
     setCode(starterTemplates[index].code);
@@ -170,7 +654,7 @@ export default function Home() {
           messages: [
             {
               role: 'user',
-              content: `You are an expert p5.js creative coder. Your task is to modify the given code based on the user's instruction.
+              content: `You are an expert p5.js creative coder. Your task is to carefully analyze and modify the given code.
 
 CURRENT CODE:
 \`\`\`javascript
@@ -179,28 +663,48 @@ ${code}
 
 USER INSTRUCTION: "${aiPrompt}"
 
-INSTRUCTION INTERPRETATIONS:
-- "色を増やす" / "add colors" → Add vibrant colors using: fill(random(255), random(255), random(255, alpha)) or colorMode(HSB) with varying hue
-- "もっとぐちゃぐちゃ" / "more chaotic" → Increase randomness: larger random ranges, add noise(), sin/cos with varying amplitudes, irregular movements
-- "動きを速く" / "faster" → Multiply ALL speed variables by 2-5x (angle+=, x+=, frameCount multipliers, etc.)
-- "動きを遅く" / "slower" → Divide ALL speed variables by 2-5x
-- "大きく" / "bigger" → Multiply ALL size parameters by 1.5-3x
-- "小さく" / "smaller" → Divide ALL size parameters by 2-3x
-- "回転" / "rotate" → Add rotation with rotate(frameCount * 0.01) or rotating elements
-- "波" / "wave" → Add sine/cosine wave patterns
-- "パーティクル" / "particles" → Add particle systems or multiple moving elements
-- "グラデーション" / "gradient" → Use lerpColor() or gradual color transitions
-- "3D" → Add WEBGL mode and 3D shapes (box, sphere, etc.)
+CRITICAL RULES:
+1. PRESERVE ALL VARIABLE DECLARATIONS (let, const, var) at the top of the code
+2. PRESERVE ALL FUNCTION DEFINITIONS (especially helper functions like createPalette)
+3. MAINTAIN THE EXACT STRUCTURE - only modify the parts relevant to the instruction
+4. DO NOT remove or reorganize existing code structure
+5. Keep all global variables, imports, and initial setup intact
+6. ALWAYS keep the setup() function - it's required for p5.js
+7. DO NOT use p5.js reserved words as variable names (setup, draw, width, height, etc.)
+8. Ensure all parentheses, braces, and brackets are properly matched
+9. Add semicolons at the end of statements
 
-IMPORTANT RULES:
-1. Output ONLY the complete modified p5.js code
-2. Ensure the code is syntactically correct and will run
-3. Make significant, visible changes based on the instruction
-4. Preserve the core structure while enhancing based on the request
-5. NO explanations, NO markdown, NO comments about changes
-6. If instruction is unclear, make creative interpretation
+P5.JS SPECIFIC RULES:
+- Never remove setup() function
+- Never declare variables named: width, height, frameCount, mouseX, mouseY
+- Always call createCanvas() inside setup()
+- Use p5.js functions correctly (fill before drawing, stroke before lines, etc.)
+- If using noLoop(), ensure draw() still exists
 
-OUTPUT THE MODIFIED CODE NOW:`
+ANALYSIS STEPS:
+1. Identify all global variables and preserve them
+2. Identify if code is static (noLoop) or animated
+3. Understand what the instruction is asking for
+4. Make ONLY the necessary changes while keeping everything else intact
+
+COMMON MODIFICATIONS:
+- "色を変える/増やす" → Modify color values, add to palette array, or change fill() calls
+- "もっとランダム/ぐちゃぐちゃ" → Adjust random() ranges, add noise to positions
+- "大きく/小さく" → Modify size variables or multipliers
+- "速く/遅く" → Only if animated, modify increment values
+- "パターンを変える" → Modify probability values or shape drawing logic
+- "アニメーション追加" → Remove noLoop() and add time-based variables
+
+EXTREMELY IMPORTANT:
+- Output ONLY valid p5.js code
+- Do NOT include any explanations outside of code comments
+- If you want to explain changes, use JavaScript comments: // 変更点: ...
+- Do NOT output any text that is not valid JavaScript
+- Do NOT use markdown formatting
+- Start directly with the code (let/const/function declarations)
+- Ensure the code will run without errors
+
+OUTPUT: The COMPLETE modified p5.js code only. Nothing else.`
             }
           ]
         })
@@ -229,15 +733,233 @@ OUTPUT THE MODIFIED CODE NOW:`
           newCode = newCode.replace(/^```\s*/gm, '');
           newCode = newCode.replace(/\s*```$/gm, '');
           
-          // 説明文が含まれている場合は除去
-          if (newCode.includes('function setup()')) {
-            const setupIndex = newCode.indexOf('function setup()');
-            if (setupIndex > 0 && newCode.substring(0, setupIndex).length > 50) {
-              newCode = newCode.substring(setupIndex);
+          // 各行をチェックして、コード以外の説明文を除去
+          const lines = newCode.split('\n');
+          const cleanedLines = [];
+          let inCode = false;
+          
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            
+            // コードの開始を検出
+            if (!inCode && (
+                trimmedLine.startsWith('let ') ||
+                trimmedLine.startsWith('const ') ||
+                trimmedLine.startsWith('var ') ||
+                trimmedLine.startsWith('function ') ||
+                trimmedLine.startsWith('//') ||
+                trimmedLine.startsWith('/*') ||
+                trimmedLine === '' ||
+                trimmedLine.includes('=') ||
+                trimmedLine.includes('{') ||
+                trimmedLine.includes('}') ||
+                trimmedLine.includes('(') ||
+                trimmedLine.includes(');')
+            )) {
+              inCode = true;
+            }
+            
+            // コードが始まったら、その行を含める
+            if (inCode) {
+              cleanedLines.push(line);
+            } else {
+              // コード外の説明文と思われる行をスキップ
+              console.log('スキップした説明文:', line);
             }
           }
           
-          newCode = newCode.trim();
+          newCode = cleanedLines.join('\n').trim();
+          
+          // 説明文として挿入された日本語行のみをコメント化
+          const finalLines = [];
+          for (const line of newCode.split('\n')) {
+            const trimmedLine = line.trim();
+            
+            // 日本語のみで構成される説明文行を検出
+            // 条件：
+            // 1. 日本語を含む
+            // 2. コメントではない（//や/*で始まらない）
+            // 3. コード要素を含まない（=, (, ), {, }, ;, : などがない）
+            // 4. 文字列リテラル内ではない（", ', ` がない）
+            if (/[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/.test(trimmedLine) && 
+                !trimmedLine.startsWith('//') && 
+                !trimmedLine.startsWith('/*') &&
+                !trimmedLine.includes('"') &&
+                !trimmedLine.includes("'") &&
+                !trimmedLine.includes('`') &&
+                !/[=(){}\[\];:,.]/.test(trimmedLine) &&
+                trimmedLine.length > 0) {
+              // 純粋な日本語説明文と判断
+              finalLines.push('// ' + line);
+              console.log('コメント化した説明文:', line);
+            } else {
+              finalLines.push(line);
+            }
+          }
+          
+          newCode = finalLines.join('\n').trim();
+          
+          // p5.js コード検証
+          const validateP5Code = (code) => {
+            const errors = [];
+            
+            // 1. 必須関数のチェック
+            if (!code.includes('function setup()')) {
+              errors.push('setup()関数が見つかりません');
+            }
+            
+            // 2. 予約語の誤用チェック
+            const p5Reserved = ['setup', 'draw', 'preload', 'mousePressed', 'mouseReleased', 
+                               'keyPressed', 'keyReleased', 'width', 'height', 'frameCount'];
+            const variableDeclarations = code.match(/(?:let|const|var)\s+(\w+)/g) || [];
+            for (const decl of variableDeclarations) {
+              const varName = decl.match(/(?:let|const|var)\s+(\w+)/)[1];
+              if (p5Reserved.includes(varName)) {
+                errors.push(`予約語 "${varName}" を変数名として使用しています`);
+              }
+            }
+            
+            // 3. 括弧の対応チェック
+            const openParens = (code.match(/\(/g) || []).length;
+            const closeParens = (code.match(/\)/g) || []).length;
+            if (openParens !== closeParens) {
+              errors.push(`括弧の数が一致しません: ( ${openParens}個, ) ${closeParens}個`);
+            }
+            
+            const openBraces = (code.match(/\{/g) || []).length;
+            const closeBraces = (code.match(/\}/g) || []).length;
+            if (openBraces !== closeBraces) {
+              errors.push(`波括弧の数が一致しません: { ${openBraces}個, } ${closeBraces}個`);
+            }
+            
+            const openBrackets = (code.match(/\[/g) || []).length;
+            const closeBrackets = (code.match(/\]/g) || []).length;
+            if (openBrackets !== closeBrackets) {
+              errors.push(`角括弧の数が一致しません: [ ${openBrackets}個, ] ${closeBrackets}個`);
+            }
+            
+            // 4. セミコロンの欠落チェック（簡易）
+            const lines = code.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i].trim();
+              if (line && 
+                  !line.startsWith('//') && 
+                  !line.startsWith('function') &&
+                  !line.includes('{') &&
+                  !line.includes('}') &&
+                  !line.startsWith('if') &&
+                  !line.startsWith('else') &&
+                  !line.startsWith('for') &&
+                  !line.startsWith('while') &&
+                  line.match(/^(let|const|var|[a-zA-Z_$][\w$]*\s*=)/) &&
+                  !line.endsWith(';') &&
+                  !line.endsWith(',')) {
+                errors.push(`行 ${i + 1}: セミコロンが欠けている可能性があります`);
+              }
+            }
+            
+            // 5. 基本的な構文エラーチェック
+            try {
+              // p5.js特有の関数をモック
+              const mockP5 = `
+                const width = 400, height = 400;
+                const frameCount = 0;
+                const PI = Math.PI, TWO_PI = Math.PI * 2, HALF_PI = Math.PI / 2;
+                const mouseX = 0, mouseY = 0;
+                function createCanvas() {}
+                function background() {}
+                function fill() {}
+                function noFill() {}
+                function stroke() {}
+                function noStroke() {}
+                function ellipse() {}
+                function rect() {}
+                function line() {}
+                function point() {}
+                function triangle() {}
+                function arc() {}
+                function random() { return Math.random(); }
+                function noise() { return Math.random(); }
+                function push() {}
+                function pop() {}
+                function translate() {}
+                function rotate() {}
+                function scale() {}
+                function color() { return {}; }
+                function colorMode() {}
+                function beginShape() {}
+                function endShape() {}
+                function vertex() {}
+                function noLoop() {}
+                function loop() {}
+                function redraw() {}
+                function frameRate() {}
+                function rectMode() {}
+                function ellipseMode() {}
+                function angleMode() {}
+                function textAlign() {}
+                function textSize() {}
+                function text() {}
+                function map() { return 0; }
+                function constrain() { return 0; }
+                function dist() { return 0; }
+                function lerp() { return 0; }
+                function lerpColor() { return {}; }
+                function sin() { return Math.sin(); }
+                function cos() { return Math.cos(); }
+                function tan() { return Math.tan(); }
+                function atan2() { return Math.atan2(); }
+                function radians() { return 0; }
+                function degrees() { return 0; }
+                function saveCanvas() {}
+                const CENTER = 'center';
+                const CORNER = 'corner';
+                const RADIANS = 'radians';
+                const DEGREES = 'degrees';
+                const RGB = 'rgb';
+                const HSB = 'hsb';
+                const PIE = 'pie';
+                const CHORD = 'chord';
+                const OPEN = 'open';
+                const CLOSE = 'close';
+              `;
+              new Function(mockP5 + '\n' + code);
+            } catch (e) {
+              errors.push(`構文エラー: ${e.message}`);
+            }
+            
+            return errors;
+          };
+          
+          // コード検証実行
+          const validationErrors = validateP5Code(newCode);
+          if (validationErrors.length > 0) {
+            console.error('コード検証エラー:', validationErrors);
+            
+            // エラーが致命的な場合は元のコードに戻す
+            const criticalErrors = validationErrors.filter(err => 
+              err.includes('setup()関数') || 
+              err.includes('構文エラー') ||
+              err.includes('括弧の数が一致しません')
+            );
+            
+            if (criticalErrors.length > 0) {
+              console.error('致命的なエラーのため、元のコードを保持します');
+              alert('生成されたコードにエラーがあります:\n' + criticalErrors.join('\n') + '\n\n元のコードを保持します。');
+              setIsProcessing(false);
+              return;
+            }
+          }
+          
+          // 重要な変数が失われていないかチェック
+          const originalVars = code.match(/^(let|const|var)\s+\w+/gm) || [];
+          const newVars = newCode.match(/^(let|const|var)\s+\w+/gm) || [];
+          
+          if (originalVars.length > newVars.length) {
+            console.warn('警告: 一部の変数宣言が失われた可能性があります');
+            console.log('元の変数:', originalVars);
+            console.log('新しい変数:', newVars);
+          }
           
           console.log('✅ AIによるコード生成成功');
           setCode(newCode);
@@ -338,6 +1060,25 @@ OUTPUT THE MODIFIED CODE NOW:`
           >
             <RefreshCw size={16} />
             リセット
+          </button>
+          <button
+            onClick={saveImage}
+            disabled={!isPlaying}
+            style={{
+              backgroundColor: isPlaying ? '#059669' : '#6b7280',
+              color: 'white',
+              padding: '0.5rem 1rem',
+              borderRadius: '0.375rem',
+              border: 'none',
+              cursor: isPlaying ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              opacity: isPlaying ? 1 : 0.6
+            }}
+          >
+            <Download size={16} />
+            画像保存
           </button>
         </div>
       </div>
@@ -495,7 +1236,7 @@ OUTPUT THE MODIFIED CODE NOW:`
                     height: '100%', 
                     border: 'none' 
                   }}
-                  sandbox="allow-scripts"
+                  sandbox="allow-scripts allow-downloads allow-same-origin"
                 />
               ) : (
                 <div style={{

@@ -6,146 +6,531 @@ import { Play } from 'lucide-react';
 const starterTemplates = [
   {
     id: 1,
-    name: "流れる粒子",
-    description: "ランダムに現れる光の粒子",
-    code: `function setup() {
-  createCanvas(400, 400);
-  background(0);
+    name: "01_なみなみ",
+    code: `let popColors;
+let numRows = 10;
+let rowHeights = [];
+let bgColor;
+let seed;
+let url = "https://coolors.co/564787-dbcbd8-f2fdff-9ad4d6-101935";
+
+function createPallete(url) {
+  let slashId = url.lastIndexOf('/');
+  let colStr = url.slice(slashId + 1);
+  let arr = colStr.split('-').map(c => color("#" + c));  // ← ここで color() を使う
+  return arr;
+}
+
+function setup() {
+  createCanvas(800, 600);
+  noLoop();
+  colorMode(RGB);
+  seed = int(random(999999));
+  randomSeed(seed);
+  popColors = createPallete(url);
+　bgColor = random(popColors);
+  // ランダムな行の高さを生成（全体がちょうどcanvas高さになるように）
+  generateRandomRowHeights();
+}
+
+function generateRandomRowHeights() {
+  let rawHeights = [];
+  let total = 0;
+  for (let i = 0; i < numRows; i++) {
+    let h = random(30, 80); // 各行の高さをランダムに（30〜80px）
+    rawHeights.push(h);
+    total += h;
+  }
+  // 正規化して高さを合計heightに合わせる
+  for (let i = 0; i < numRows; i++) {
+    rowHeights[i] = rawHeights[i] * (height / total);
+  }
 }
 
 function draw() {
-  fill(255, 10);
+  background(bgColor);
+  let y = 0;
+  for (let i = 0; i < numRows; i++) {
+    let h = rowHeights[i];
+
+    // 波のような色の流れ（行番号によるsin波）
+    let wave = sin(i * 0.8);
+    let shiftRaw = map(wave, -1, 1, 0, popColors.length * 2);
+    let shift = floor(shiftRaw) % popColors.length;
+    let colors = rotateColors(popColors, shift);
+    drawHorizontalGradientRect(0, y, width, h, colors);
+    y += h;
+  }
+}
+
+// グラデーションを描く
+function drawHorizontalGradientRect(x, y, w, h, colors) {
   noStroke();
-  let x = random(width);
-  let y = random(height);
-  let size = random(2, 20);
-  ellipse(x, y, size, size);
-}`
+  for (let i = 0; i < w; i++) {
+    let t = i / (w - 1);
+    let c = getGradientColor(t, colors);
+    fill(c);
+    rect(x + i, y, 1, h);
+  }
+}
+
+// グラデーション色の補間
+function getGradientColor(t, colors) {
+  let index = floor(t * (colors.length - 1));
+  let localT = map(t, index / (colors.length - 1), (index + 1) / (colors.length - 1), 0, 1);
+  return lerpColor(colors[index], colors[(index + 1) % colors.length], localT);
+}
+
+// 配列をローテート
+function rotateColors(arr, n) {
+  return arr.slice(n).concat(arr.slice(0, n));
+}
+
+function keyPressed() {
+  if (key == 's' || key == 'S') saveCanvas(seed + "",'png');
+}
+
+`
   },
   {
     id: 2,
-    name: "回転する幾何学",
-    description: "中心で回転する四角形",
-    code: `let angle = 0;
+    name: "02_つみきのように",
+    code: `let url = "https://coolors.co/333333-7f5af0-4ade80-22d3ee-fda4af"; 
+let palette;
+let bgColor;
+let seed;
+
+function createPallete(url) {
+  let slashId = url.lastIndexOf('/');
+  let colStr = url.slice(slashId + 1);
+  let arr = colStr.split('-').map(c => "#" + c);
+  return arr;
+}
 
 function setup() {
-  createCanvas(400, 400);
+  createCanvas(600, 800);
+  seed = int(random(999999));
+  randomSeed(seed);
+  palette = createPallete(url);
+  bgColor = random(palette);
+  noLoop();
+  noStroke();
   rectMode(CENTER);
+  angleMode(DEGREES);
 }
 
 function draw() {
-  background(0, 20);
-  translate(width/2, height/2);
-  rotate(angle);
-  stroke(255);
-  noFill();
-  rect(0, 0, 100, 100);
-  angle += 0.02;
-}`
+  background(bgColor);
+	
+  let xnum = 10;
+  let ynum = 100;
+  let colWidth = width / xnum;
+
+  // 波の振幅と周期（左右の揺れ）
+  let waveAmplitude = 50; 
+  let waveFrequency = TWO_PI / xnum * 4;  // x方向に4周期の波
+
+  for (let x = 0; x < xnum; x++) {
+    let shuffled = shuffle(palette);
+    let colA = color(shuffled[0]);
+    let colB = color(shuffled[1]);
+    let colC = color(shuffled[2]);
+
+    let shapeW = random(30, 120);
+    let shapeH = height;
+
+    let cx = x * colWidth + colWidth / 2;
+    let cy = height / 2;
+
+    let angle;
+    if (random() < 0.3) {
+      angle = 0;
+    } else {
+      angle = random(-60, 60);
+    }
+
+    push();
+    translate(cx, cy);
+    for (let i = 0; i < ynum; i++) {
+      let waveOffsetX = sin(i * waveFrequency) * random(100);
+      let t = i / (ynum - 1);
+      let baseY = map(i, 0, ynum - 1, -shapeH / 2, shapeH / 2);
+
+      let y = baseY;
+      let xPos = waveOffsetX; // iではなくxを使った波のずれ
+
+      let c;
+      if (t < 0.5) {
+        c = lerpColor(colA, colB, map(t, 0, 0.5, 0, 1));
+      } else {
+        c = lerpColor(colB, colC, map(t, 0.5, 1, 0, 1));
+      }
+
+      c.setAlpha(220);
+      fill(c);
+      rect(xPos, y, shapeW, shapeH / ynum + 1);
+    }
+
+    pop();
+  }
+}
+
+function keyPressed() {
+  if (key == 's' || key == 'S') saveCanvas(seed + "",'png');
+}
+`
   },
   {
     id: 3,
-    name: "ノイズの波",
-    description: "パーリンノイズで作る波形",
-    code: `let t = 0;
+    name: " 3_カーテン",
+    code: `let url = "https://coolors.co/ef476f-ffd166-06d6a0-118ab2-073b4c";  // 149
+let palette;
+let paletteColors;
+
+function createPallete(url) {
+  let slashId = url.lastIndexOf('/');
+  let colStr = url.slice(slashId + 1);
+  let arr = colStr.split('-').map(c => "#" + c);
+  return arr;
+}
 
 function setup() {
-  createCanvas(400, 400);
+		pixelDensity(3);
+  createCanvas(600, 800);
+  palette = createPallete(url);
+  paletteColors = palette.map(c => color(c));
+  paletteColors = shuffle(paletteColors, true);
+  noLoop();
+  background(0);
+  strokeWeight(1);
+  noFill();
 }
 
 function draw() {
-  background(0, 10);
-  stroke(255);
-  noFill();
-  beginShape();
-  for (let x = 0; x < width; x += 5) {
-    let y = height/2 + noise(x * 0.01, t) * 200 - 100;
-    vertex(x, y);
+  background(0);
+
+  let waveCount = 300;
+  let amplitude = 30;
+
+  for (let i = 0; i < waveCount; i++) {
+    let yOffset = map(i, 0, waveCount - 1, height * 0.05, height * 0.95);
+    let waveFreq = map(i, 0, waveCount - 1, 0.02, 0.12);
+
+    let segmentLength = 3;
+
+    for (let x = 0; x < width; x += segmentLength) {
+      let x0 = x;
+      let x1 = min(x + segmentLength, width);
+
+      let y0 = yOffset + sin(x0 * waveFreq + i * TWO_PI / waveCount) * amplitude;
+      let y1 = yOffset + sin(x1 * waveFreq + i * TWO_PI / waveCount) * amplitude;
+
+      // 色の補間パラメータを斜め方向に計算
+      let t = ((x0 + y0) + (x1 + y1)) / 2 / (width + height);
+      let col = getGradientColor(t);
+
+      stroke(col);
+      line(x0, y0, x1, y1);
+    }
   }
-  endShape();
-  t += 0.01;
-}`
+}
+
+function getGradientColor(t) {
+  let n = paletteColors.length - 1;
+  let scaledT = t * n;
+  let idx = floor(scaledT);
+  idx = constrain(idx, 0, n - 1);
+  let localT = scaledT - idx;
+  return lerpColor(paletteColors[idx], paletteColors[idx + 1], localT);
+}
+
+function keyPressed() {
+  if (key == 's' || key == 'S') saveCanvas();
+}
+`
   },
   {
     id: 4,
-    name: "カラフルな円",
-    description: "ランダムな色と大きさの円",
-    code: `function setup() {
-  createCanvas(400, 400);
-  noStroke();
+    name: "4_ぐにゃぐにゃの線",
+    code: `let url = "https://coolors.co/caffd0-c9e4e7-b4a0e5-ca3cff-1e1014";
+let palette;
+let bgColor;
+let seed;
+
+function createPallete(url) {
+	let slashId = url.lastIndexOf('/');
+	let colStr = url.slice(slashId + 1);
+	let arr = colStr.split('-').map(c => "#" + c);
+	return arr;
+}
+
+function keyPressed() {
+  if (key == 's' || key == 'S') {
+    saveCanvas();
+  }
+}
+
+function setup() {
+  createCanvas(600, 800);
+  seed = int(random(999999));
+  randomSeed(seed);
+  palette = createPallete(url);
+　bgColor = random(palette);
+  shapePalette = palette.filter(c => c !== bgColor); 
+  noLoop();
 }
 
 function draw() {
-  let x = random(width);
-  let y = random(height);
-  let r = random(255);
-  let g = random(255);
-  let b = random(255);
-  fill(r, g, b, 50);
-  ellipse(x, y, random(10, 100));
-}`
+  background(bgColor);
+  let xnum = 10;
+  let ynum = 13;
+  let w = width / xnum;
+  let h = height / ynum;
+  for (let y = 0; y < ynum; y++) {
+    for (let x = 0; x < xnum; x++) {
+      let cx = x * w + w / 2;
+      let cy = y * h + h / 2;
+      let c = color(random(shapePalette));
+      stroke(c);
+      noFill();
+      let pts = drawRandomLine(cx, cy, w, h);
+
+      // 線の始点と終点に円を描く
+      let circleSize = 8;
+      fill(c);
+      noStroke();
+
+      rectMode(CENTER);
+      ellipse(pts[pts.length - 2].x, pts[pts.length -2].y, circleSize*0.8, circleSize*0.8); 
+      rect(pts[1].x, pts[1].y, 1, circleSize*30);
+    }
+  }
+}
+
+function drawRandomLine(x, y, w, h) {
+  let steps = int(random(10, 25));
+  let len = min(w, h) * 0.5;
+  let px = x;
+  let py = y;
+  let points = [];
+
+  beginShape();
+  for (let i = 0; i < steps; i++) {
+    let angle = noise(px * 0.01, py * 0.01, i * 0.1) * TWO_PI * 2;
+    let dx = cos(angle) * len;
+    let dy = sin(angle) * len;
+    let nx = px + dx;
+    let ny = py + dy;
+    let sw = (noise(px, py, i), 0, 1, 1, random(4));
+    strokeWeight(sw);
+  
+    curveVertex(nx, ny);
+    points.push({ x: nx, y: ny });
+    px = nx;
+    py = ny;
+  }
+  endShape();
+
+  return points;
+}
+
+function keyPressed() {
+  if (key == 's' || key == 'S') saveCanvas(seed + "",'png');
+}
+
+`
   },
   {
     id: 5,
-    name: "スパイラル",
-    description: "外側に広がる螺旋",
-    code: `let angle = 0;
-let radius = 0;
+    name: " 5_いばら",
+    code: `let url = "https://coolors.co/fbaf00-ffd639-ffa3af-007cbe-00af54";
+let palette;
+let seed;
+
+function createPallete(url) {
+  let slashId = url.lastIndexOf('/');
+  let colStr = url.slice(slashId + 1);
+  let arr = colStr.split('-').map(c => "#" + c);
+  return arr;
+}
 
 function setup() {
-  createCanvas(400, 400);
-  background(0);
+  createCanvas(600, 800);
+  seed = int(random(999999));
+  randomSeed(seed);
+  palette = createPallete(url);
+  angleMode(DEGREES);
+  noLoop();
 }
 
 function draw() {
-  translate(width/2, height/2);
-  let x = radius * cos(angle);
-  let y = radius * sin(angle);
-  stroke(255);
-  point(x, y);
-  angle += 0.1;
-  radius += 0.1;
-  if (radius > 200) {
-    radius = 0;
-    background(0);
+  background(0);
+  let xnum = 6;
+  let ynum = 8;
+  let w = width / xnum;
+  let h = height / ynum;
+
+  let v1 = random(0.5, 1);
+  let v2 = random(0.1, 0.3);
+  
+  for (let y = 0; y < ynum; y++) {
+    for (let x = 0; x < xnum; x++) {
+      let cx = x * w + w / 2;
+      let cy = y * h + h / 2;
+
+      push();
+      translate(cx, cy);
+
+      let blades = 4;             // 羽根は4枚
+      let turns = 5;              // ぐるぐる巻きの回転数
+      let bladeLength = w * v1;
+      let bladeWidth = w * v2;
+
+      for (let i = 0; i < blades; i++) {
+        // ブレードごとにスパイラルの角度をずらす
+        let baseAngle = i * (360 / blades);
+        
+        // さらに内側から外側へ少しずつ回転させて重ねるループ
+        for (let t = 0; t < turns; t++) {
+          push();
+          // スパイラル角度は基本角 + 360度×回転数
+          let spiralAngle = baseAngle + t * (360 / turns);
+          rotate(spiralAngle);
+          // ブレードの長さ方向に少しずつずらす
+          let offset = (bladeLength / turns) * t;
+					
+          translate(0, -offset);
+          fill(random(palette));
+          noStroke();
+          beginShape();
+          vertex(0, 0);
+          vertex(bladeWidth / 2, - (bladeLength / turns));
+          vertex(-bladeWidth / 2, - (bladeLength / turns));
+          endShape(CLOSE);
+
+          pop();
+        }
+      }
+      pop();
+    }
   }
-}`
+}
+
+function keyPressed() {
+  if (key == 's' || key == 'S') saveCanvas(seed + "",'png');
+}
+`
   },
   {
     id: 6,
-    name: "パーティクルシステム",
-    description: "中心から広がる粒子",
-    code: `let particles = [];
+    name: " 6_もじであそぶ",
+    code: `let url = "https://coolors.co/e08dac-6a7fdb-57e2e5-45cb85-153131";
+let palette;
+let circles = [];
+let bgColor;
+let seed;
+
+let pokemonNames = [
+  "ピカチュウ", "イーブイ", "ゼニガメ", "フシギダネ", "ヒトカゲ",
+  "プリン", "カビゴン", "ミュウ", "ミュウツー", "リザードン",
+  "ニャース", "ルカリオ", "ゲンガー", "ポッチャマ", "キモリ",
+  "ヒコザル", "ポカブ", "モクロー", "ケロマツ", "ヤドン"
+];
+
+function createPallete(url) {
+  let slashId = url.lastIndexOf('/');
+  let colStr = url.slice(slashId + 1);
+  return colStr.split('-').map(c => "#" + c);
+}
 
 function setup() {
-  createCanvas(400, 400);
+	// pixelDensity(3);
+	// pixelDensity(4);
+  createCanvas(600, 800);
+  seed = int(random(999999));
+  randomSeed(seed);
+  palette = createPallete(url);
+  bgColor = random(palette);
+  shapePalette = palette.filter(c => c !== bgColor);
+  angleMode(DEGREES);
+  noLoop();
+  noStroke();
+  packCircles();
+  assignCharacters();
+}
+
+function packCircles() {
+  let attempts = 0;
+  let maxTries = 20000;
+  let maxCircles = 600;
+
+  while (circles.length < maxCircles && attempts < maxTries) {
+    let r = random(10, 60);
+    let x = random(r, width - r);
+    let y = random(r, height - r);
+
+    let valid = true;
+    for (let c of circles) {
+      let d = dist(x, y, c.x, c.y);
+      if (d < r + c.r + 0.5) {
+        valid = false;
+        break;
+      }
+    }
+
+    if (valid) {
+      circles.push({ x, y, r, char: "", angle: 0 });
+    }
+
+    attempts++;
+  }
+}
+
+function assignCharacters() {
+  let charPool = [];
+
+  // 文字のプールを作る（ランダムな順番で全ポケモン名の文字）
+  while (charPool.length < circles.length) {
+    let name = random(pokemonNames);
+    let chars = name.split("");
+    for (let ch of chars) {
+      charPool.push(ch);
+      if (charPool.length >= circles.length) break;
+    }
+  }
+
+  // 各円に1文字ずつと角度を割り当て
+  for (let i = 0; i < circles.length; i++) {
+    circles[i].char = charPool[i];
+    circles[i].angle = random(-45, 45);  // -45〜+45度で回転
+  }
 }
 
 function draw() {
-  background(0, 25);
-  particles.push({
-    x: width/2,
-    y: height/2,
-    vx: random(-2, 2),
-    vy: random(-2, 2)
-  });
-  
-  for (let i = particles.length - 1; i >= 0; i--) {
-    let p = particles[i];
-    p.x += p.vx;
-    p.y += p.vy;
-    stroke(255);
-    point(p.x, p.y);
-    
-    if (p.x < 0 || p.x > width || p.y < 0 || p.y > height) {
-      particles.splice(i, 1);
-    }
+  background(bgColor);
+  for (let c of circles) {
+    drawLabeledCircle(c);
   }
-  
-  if (particles.length > 100) {
-    particles.splice(0, 1);
-  }
-}`
+}
+
+function drawLabeledCircle(c) {
+  push();
+  translate(c.x, c.y);
+  rotate(c.angle);
+  fill(random(shapePalette));
+  textAlign(CENTER, CENTER);
+  textFont('sans-serif');
+  textLeading(c.r * 1.1); // 複数行になるときの行間も自然に
+  textStyle(BOLD);
+  textSize(c.r * 2.5);
+  text(c.char, 0, 0);  // 回転中心に描画
+  pop();
+}
+
+function keyPressed() {
+  if (key == 's' || key == 'S') saveCanvas(seed + "",'png');
+}
+`
   }
 ];
 
